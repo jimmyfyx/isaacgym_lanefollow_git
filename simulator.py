@@ -4,6 +4,7 @@ import shutil
 from isaacgym import gymapi, gymutil, gymtorch
 import math
 import torch
+import matplotlib.pyplot as plt
 
 from PIL import Image
 
@@ -164,6 +165,15 @@ class Simulator:
 
         # Run Simulation
         frame_count = 0
+        
+        # Plotting usage
+        mpc_linear = []
+        gt_linear = []
+        gt_angular = []
+        mpc_angular_z = []
+        x_body = []
+        y_body = []
+        
         while not gym.query_viewer_has_closed(viewer):
             # Step the physics
             gym.simulate(sim)
@@ -181,7 +191,7 @@ class Simulator:
             w_quat = cur_robot_orient[3].item()
             row, pitch, yaw = self.euler_from_quaternion(x_quat, y_quat, z_quat, w_quat)
 
-            self.mpc_handle.prepare_ref_path(x_pos, y_pos, yaw)  # Prepare reference path
+            x_body_init, y_body_init = self.mpc_handle.prepare_ref_path(x_pos, y_pos, yaw)  # Prepare reference path
             u, mpc_output, ss_error = self.mpc.solve_mpc(self.mpc_handle.mpc_reference)  # MPC output
 
             # Convert body velocity to wheel velocity
@@ -192,11 +202,19 @@ class Simulator:
             # print("%f, %f, %f" % (row, pitch, yaw))
             # print('Position: ', cur_robot_pos)s
             # print(self.mpc_handle.mpc_reference)
-            print('linear_x_vel', linear_x_vel)
-            print('angular_z_vel', angular_z_vel)
-            print('right_angular', right_angular)
-            print('left_angular', left_angular)
-            print('ground_truth_lin', root_linvels[0])
+            # print('linear_x_vel', linear_x_vel)
+            # print('angular_z_vel', angular_z_vel)
+            # print('right_angular', right_angular)
+            # print('left_angular', left_angular)
+            # print('ground_truth_lin', root_linvels[0])
+            
+            # Plotting usage
+            mpc_linear.append(float(linear_x_vel))
+            mpc_angular_z.append(-float(angular_z_vel))
+            gt_linear.append(np.sqrt((float(root_linvels[0][0].item())) ** 2 + (float(root_linvels[0][1].item())) ** 2))
+            gt_angular.append(float(root_angvels[0][2].item()))  # Angular vel for z-axis
+            x_body.append(float(x_body_init))
+            y_body.append(float(y_body_init))
 
             # Drive DOF with velocity from MPC (tensor control)
             num_dofs = gym.get_sim_dof_count(sim)  # Total number of DOFs for all environments
@@ -232,6 +250,41 @@ class Simulator:
             # Wait for dt to elapse in real time.
             # This synchronizes the physics simulation with the rendering rate.
             gym.sync_frame_time(sim)
+        
+        # Plotting usage
+        time_steps = [i for i in range(frame_count)]
+        # Plot output linear velocity and ground truth linear velocity
+        plt.figure()
+        plt.plot(time_steps, mpc_linear, color='g', label="MPC Linear Velocity")
+        plt.plot(time_steps, gt_linear, color='r', label="Ground-truth Linear Velocity")
+        plt.xlabel('Time Steps')
+        plt.ylabel('Linear Velocity')
+        plt.title('MPC v.s. Ground-truth', fontsize=20)
+        plt.grid()
+        plt.legend()
+        plt.savefig(f'lin_vel.jpg')
+
+        # Plot output angular velocity and ground truth angular velocity
+        plt.figure()
+        plt.plot(time_steps, mpc_angular_z, color='g', label="MPC Angular Velocity")
+        plt.plot(time_steps, gt_angular, color='r', label="Ground-truth Angular Velocity")
+        plt.xlabel('Time Steps')
+        plt.ylabel('Angular Velocity')
+        plt.title('MPC v.s. Ground-truth', fontsize=20)
+        plt.grid()
+        plt.legend()
+        plt.savefig(f'ang_vel.jpg')
+
+        # Plot the first reference point for every time step
+        plt.figure()
+        plt.plot(time_steps, x_body, color='g', label="x")
+        plt.plot(time_steps, y_body, color='r', label="y")
+        plt.xlabel('Time Steps')
+        plt.ylabel('Body Positions')
+        plt.title('Body x-y Positions 30Deg', fontsize=20)
+        plt.grid()
+        plt.legend()
+        plt.savefig(f'positions.jpg')
 
         # Shut down simulator
         gym.destroy_viewer(viewer)

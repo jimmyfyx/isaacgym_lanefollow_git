@@ -53,17 +53,17 @@ class MPCHandle:
         trans_matrix[0:2, 0:2] = rot_matrix
         trans_matrix[:, 2] = trans_vec
         body_homo_coordinate = np.matmul(trans_matrix, np.array([[x_ref_world], [y_ref_world], [1]]))
-        x_body = body_homo_coordinate[0][0]  # The first point of reference path in body frame
-        y_body = body_homo_coordinate[1][0]
+        x_body_init = body_homo_coordinate[0][0]  # The first point of reference path in body frame
+        y_body_init = body_homo_coordinate[1][0]
 
-        print('x_world', x_ref_world)
-        print('y_world', y_ref_world)
-        print('x_body', x_body)
-        print('y_body', y_body)
+        # print('x_world', x_ref_world)
+        # print('y_world', y_ref_world)
+        # print('x_body', x_body)
+        # print('y_body', y_body)
 
         # First reference waypoint
-        self.mpc_reference['x'].append(x_body)  # TODO: Try not setting body x to 0
-        self.mpc_reference['y'].append(y_body)
+        self.mpc_reference['x'].append(x_body_init)  # TODO: Try not setting body x to 0
+        self.mpc_reference['y'].append(y_body_init)
         self.mpc_reference['theta'].append(-yaw)  # TODO: What does theta mean here?
         self.mpc_reference['speed'] = np.ones(self.ref_path_length + 1) * self.ref_speed  # Reference speed
 
@@ -77,6 +77,8 @@ class MPCHandle:
             self.mpc_reference['x'].append(x_body)
             self.mpc_reference['y'].append(y_body)
             self.mpc_reference['theta'].append(-yaw)  # TODO: What does theta mean here?
+
+        return x_body_init, y_body_init
 
     def body_to_wheel_vel(self, body_x_lin, body_z_ang):
         """Use differential drive model to convert body velocities to wheel velocities
