@@ -163,7 +163,7 @@ class EnvCreator:
         :type robot_handle: actor class
         """
         robot_pose = gymapi.Transform()
-        robot_pose.p = gymapi.Vec3(0.0, 0.3, 0.1)
+        robot_pose.p = gymapi.Vec3(0.0, 0.0, 0.1)
         robot_pose.r = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 0, 1), np.radians(0.0))  # in environment world frame
         robot_handle = self.gym.create_actor(env, self.robot_asset, robot_pose, "terrasentia", env_idx, 2)
         env_actor_handles.append(robot_handle)
@@ -183,7 +183,7 @@ class EnvCreator:
         # TODO: Fix some of the plant parameters for now
         plant_name = random.choice(self.plants_names)
         plant_asset = self.plants_assets_dict[plant_name]  # Choose plant asset
-        row_length = 1  # Length of a row (m)
+        row_length = 10  # Length of a row (m)
         plants_dist = 0.2  # Distance between individual plants (m)
         gap_prob = 0.02
         plant_rgb = self._generate_random_green()  # Randomize plant colors (green range)
